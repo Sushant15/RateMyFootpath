@@ -1,5 +1,5 @@
 //Initialize map
-var map = L.map('map').setView([28.65, 77.23], 17);
+var map = L.map('map').setView([28.6331, 77.2211], 16);
 
 //Add Layer
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -8,39 +8,81 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 // Variables to store coordinates
-let lat, long;
-let locationMarker;
+let coordinates = {
+    lat: null,
+    lng: null
+};
 
-// Button click handler
-document.getElementById("fml-button").addEventListener("click", () => {
-    if (!navigator.geolocation) {
-        alert("Geolocation is not supported by this browser.");
+// Variables to store marker
+let locationMarker = null;
+
+
+/**
+ * Updates marker position.
+ * Removes old marker if exists.
+ * Creates new draggable marker.
+ */
+function updateMarker(map) {
+
+    // Safety check
+    if (coordinates.lat == null || coordinates.lng == null) {
+        console.error("Latitude or Longitude is null.");
         return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            // Set variables
-            lat = position.coords.latitude;
-            long = position.coords.longitude;
+    // Remove previous marker
+    if (locationMarker) {
+        locationMarker.remove();
+        locationMarker = null;
+    }
 
-            console.log("Latitude:", lat);
-            console.log("Longitude:", long);
+    // Create new draggable marker
+    locationMarker = L.marker(coordinates, {
+        draggable: true
+    }).addTo(map);
 
-            // Remove previous marker if exists
-            if (locationMarker) {
-                map.removeLayer(locationMarker);
-            }
+    // Center map
+    map.setView(coordinates, 18);
 
-            // Add marker to map
-            locationMarker = L.marker([lat, long]).addTo(map);
+    console.log("Marker set to:", coordinates.lat, coordinates.lng);
 
-            // Center map
-            map.setView([lat, long], 17);
-        },
-        (error) => {
-            console.error(error);
-            alert("Error getting location: " + error.message);
-        }
-    );
-});
+    // Update lat/lng after dragging
+    locationMarker.on("dragend", function () {
+        const position = locationMarker.getLatLng();
+
+        coordinates.lat = position.lat;
+        coordinates.lng = position.lng;
+
+        console.log("Marker dragged to:", coordinates.lat, coordinates.lng);
+    });
+}
+
+/*
+  create options object @options for getCurrentPosition() method
+  creat success function @success for getCurrentPosition() method
+  create error function @error for getCurrentPosition() method
+*/
+
+const options = {
+  enableHighAccuracy: true,
+};
+
+function success(pos) {
+  const crd = pos.coords;
+
+  coordinates.lat = pos.coords.latitude;
+  coordinates.lng = pos.coords.longitude;
+
+  updateMarker(map); //Draggable marker functiom
+
+  console.log("Your current position is:");
+  console.log(`Latitude : ${coordinates.lat}`);
+  console.log(`Longitude: ${coordinates.lng}`);
+  console.log(`More or less ${crd.accuracy} meters.`);
+}
+
+function error(err) {
+  console.warn(`ERROR(${err.code}): ${err.message}`);
+}
+
+navigator.geolocation.getCurrentPosition(success, error, options);
