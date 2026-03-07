@@ -3,7 +3,7 @@
 // =============================
 
 // Replace with your PythonAnywhere username
-const API_URL = "https://YOUR_USERNAME.pythonanywhere.com/submit/";
+const API_URL = "https://sushantgarg15.pythonanywhere.com/submit/";
 
 
 // =============================
@@ -183,4 +183,5 @@ submitButton.addEventListener("click", async () => {
     }
 
 });
+
 
