@@ -67,7 +67,7 @@ class IssueReported(SQLModel, table=True):
 # DATABASE ENGINE
 # ----------------------------
 
-sqlite_url = "sqlite:///./rate_my_footpath.db"
+sqlite_url = "sqlite:///./API/rate_my_footpath.db"
 
 connect_args = {"check_same_thread": False}
 
@@ -76,3 +76,4 @@ engine = create_engine(
     echo=True,
     connect_args=connect_args
 )
+
