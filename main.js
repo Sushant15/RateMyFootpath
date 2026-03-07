@@ -124,7 +124,7 @@ document.getElementById("submit-button").addEventListener("click", async (event)
   }
 
   try {
-    const response = await fetch("http://Sushantgarg15.pythonanywhere.com/submit/", {        //use 127.0.0.1:8000 if working on local machine
+    const response = await fetch("https://Sushantgarg15.pythonanywhere.com/submit/", {        //use 127.0.0.1:8000 if working on local machine
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -150,4 +150,5 @@ document.getElementById("submit-button").addEventListener("click", async (event)
     //location.reload();
   }
 });
+
 
