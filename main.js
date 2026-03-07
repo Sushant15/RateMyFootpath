@@ -1,154 +1,186 @@
-//Initialize map
+// =============================
+// CONFIG
+// =============================
+
+// Replace with your PythonAnywhere username
+const API_URL = "https://YOUR_USERNAME.pythonanywhere.com/submit/";
+
+
+// =============================
+// INITIALIZE MAP
+// =============================
+
 var map = L.map('map').setView([28.6331, 77.2211], 16);
 
-//Add Layer
+// Add OpenStreetMap layer
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    attribution: '&copy; OpenStreetMap'
 }).addTo(map);
 
-// Variables to store coordinates
+
+// =============================
+// LOCATION VARIABLES
+// =============================
+
 let coordinates = {
     lat: null,
     lng: null
 };
 
-// Variables to store marker
 let locationMarker = null;
 
 
-/**
- * Updates marker position.
- * Removes old marker if exists.
- * Creates new draggable marker.
- */
+// =============================
+// UPDATE MARKER FUNCTION
+// =============================
+
 function updateMarker(map) {
 
-    // Safety check
-    if (coordinates.lat == null || coordinates.lng == null) {
-        console.error("Latitude or Longitude is null.");
+    if (coordinates.lat === null || coordinates.lng === null) {
+        console.error("Latitude or Longitude missing.");
         return;
     }
 
     // Remove previous marker
     if (locationMarker) {
         locationMarker.remove();
-        locationMarker = null;
     }
 
-    // Create new draggable marker
+    // Create draggable marker
     locationMarker = L.marker(coordinates, {
         draggable: true
     }).addTo(map);
 
-    // Center map
     map.setView(coordinates, 18);
 
-    console.log("Marker set to:", coordinates.lat, coordinates.lng);
+    console.log("Marker placed:", coordinates.lat, coordinates.lng);
 
-    // Update lat/lng after dragging
+    // Update coordinates after dragging
     locationMarker.on("dragend", function () {
         const position = locationMarker.getLatLng();
 
         coordinates.lat = position.lat;
         coordinates.lng = position.lng;
 
-        console.log("Marker dragged to:", coordinates.lat, coordinates.lng);
+        console.log("Marker moved:", coordinates.lat, coordinates.lng);
     });
 }
 
-/*
-  create options object @options for getCurrentPosition() method
-  creat success function @success for getCurrentPosition() method
-  create error function @error for getCurrentPosition() method
-*/
+
+// =============================
+// GEOLOCATION
+// =============================
 
 const options = {
-  enableHighAccuracy: true,
+    enableHighAccuracy: true
 };
 
 function success(pos) {
-  const crd = pos.coords;
 
-  coordinates.lat = pos.coords.latitude;
-  coordinates.lng = pos.coords.longitude;
+    coordinates.lat = pos.coords.latitude;
+    coordinates.lng = pos.coords.longitude;
 
-  updateMarker(map); //Draggable marker functiom
+    updateMarker(map);
 
-  console.log("Your current position is:");
-  console.log(`Latitude : ${coordinates.lat}`);
-  console.log(`Longitude: ${coordinates.lng}`);
-  console.log(`More or less ${crd.accuracy} meters.`);
+    console.log("Location detected:", coordinates);
 }
 
 function error(err) {
-  console.warn(`ERROR(${err.code}): ${err.message}`);
+    alert("Unable to get your location. Please enable GPS.");
+    console.warn(`ERROR(${err.code}): ${err.message}`);
 }
 
+// Request location
 navigator.geolocation.getCurrentPosition(success, error, options);
 
-/*
-  This code is to capture the list of issues selected for a location
-*/
 
-const selectedIssues = [];
+// =============================
+// ISSUE COLLECTION
+// =============================
 
-function submitIssues() {
+function getSelectedIssues() {
+
+    const selectedIssues = [];
 
     document.querySelectorAll('input[name="issues"]:checked')
-          .forEach((checkbox) => {
-              selectedIssues.push({
-                  id: checkbox.id,
-                  value: checkbox.value
-              });
-          });
+        .forEach((checkbox) => {
 
-      //console.log(selectedIssues);
+            selectedIssues.push({
+                id: Number(checkbox.id),
+                value: checkbox.value
+            });
 
-  }
+        });
+
+    return selectedIssues;
+}
 
 
-/*
- This code is for calling the api to save the issue in database
-*/
+// =============================
+// SUBMIT DATA
+// =============================
 
-//create entry in database for submit Button
-document.getElementById("submit-button").addEventListener("click", async (event) => {
+const submitButton = document.getElementById("submit-button");
 
-  submitIssues(); //call function
+submitButton.addEventListener("click", async () => {
 
-  // Make sure location was captured first
-  if (coordinates.lat === undefined || coordinates.lng === undefined) {
-    alert("Please get your location first.");
-    return;
-  }
+    const issues = getSelectedIssues();
 
-  try {
-    const response = await fetch("https://Sushantgarg15.pythonanywhere.com/submit/", {        //use 127.0.0.1:8000 if working on local machine
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        latitude: coordinates.lat,
-        longitude: coordinates.lng,
-        issues: selectedIssues
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`);
+    // Validate coordinates
+    if (coordinates.lat === null || coordinates.lng === null) {
+        alert("Location not detected yet. Please allow GPS.");
+        return;
     }
 
-    const data = await response.json();
-    console.log("Saved:", data);
-    alert("Location saved successfully!");
-    //location.reload();
-  } catch (err) {
-    console.error(err);
-    alert("Failed to save location");
-    //location.reload();
-  }
-});
+    // Validate issues
+    if (issues.length === 0) {
+        alert("Please select at least one issue.");
+        return;
+    }
 
+    // Disable button while sending
+    submitButton.disabled = true;
+    submitButton.innerText = "Submitting...";
+
+    try {
+
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                latitude: coordinates.lat,
+                longitude: coordinates.lng,
+                issues: issues
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        console.log("Saved:", data);
+
+        alert("✅ Report submitted successfully!");
+
+        // Reset form
+        document.querySelectorAll('input[name="issues"]').forEach(cb => cb.checked = false);
+
+    } catch (error) {
+
+        console.error(error);
+        alert("❌ Failed to submit report. Please try again.");
+
+    } finally {
+
+        submitButton.disabled = false;
+        submitButton.innerText = "Submit";
+
+    }
+
+});
 
