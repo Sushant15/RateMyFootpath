@@ -86,3 +86,67 @@ function error(err) {
 }
 
 navigator.geolocation.getCurrentPosition(success, error, options);
+
+/*
+  This code is to capture the list of issues selected for a location
+*/
+
+const selectedIssues = [];
+
+function submitIssues() {
+
+    document.querySelectorAll('input[name="issues"]:checked')
+          .forEach((checkbox) => {
+              selectedIssues.push({
+                  id: checkbox.id,
+                  value: checkbox.value
+              });
+          });
+
+      //console.log(selectedIssues);
+
+  }
+
+
+/*
+ This code is for calling the api to save the issue in database
+*/
+
+//create entry in database for submit Button
+document.getElementById("submit-button").addEventListener("click", async (event) => {
+
+  submitIssues(); //call function
+
+  // Make sure location was captured first
+  if (coordinates.lat === undefined || coordinates.lng === undefined) {
+    alert("Please get your location first.");
+    return;
+  }
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/submit/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        latitude: coordinates.lat,
+        longitude: coordinates.lng,
+        issues: selectedIssues
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Saved:", data);
+    alert("Location saved successfully!");
+    //location.reload();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to save location");
+    //location.reload();
+  }
+});
