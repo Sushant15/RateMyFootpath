@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import List
 from sqlmodel import Session
 
-from models import engine, ReportData, IssueReported, IssueType
+from .models import engine, ReportData, IssueReported, IssueType
 from pydantic_extra_types.coordinate import Latitude, Longitude
 
 
@@ -82,3 +82,4 @@ def submit_issue(report: ReportCreate):
         }
 
         
+
