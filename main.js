@@ -3,7 +3,7 @@
 // =============================
 
 // Replace with your PythonAnywhere username
-const API_URL = "https://sushantgarg15.pythonanywhere.com/submit/";
+const API_URL = "curl https://api-wandering-dream-7324.fly.dev/submit/";
 
 
 // =============================
