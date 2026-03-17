@@ -1,6 +1,8 @@
 from sqlmodel import Field, SQLModel, create_engine
 from pydantic_extra_types.coordinate import Latitude, Longitude
 from enum import Enum
+from datetime import datetime
+import pytz
 
 
 # ----------------------------
@@ -36,6 +38,16 @@ class IssueType(Enum):
 
 
 # ----------------------------
+# IST TIME HELPER
+# ----------------------------
+
+IST = pytz.timezone("Asia/Kolkata")
+
+def get_ist_time():
+    return datetime.now(IST)
+
+
+# ----------------------------
 # DATABASE MODELS
 # ----------------------------
 
@@ -48,6 +60,9 @@ class ReportData(ReportBase, table=True):
     __tablename__ = "report_data"
 
     id: int | None = Field(default=None, primary_key=True)
+
+    # New timestamp column (IST)
+    timestamp: datetime = Field(default_factory=get_ist_time, nullable=False)
 
 
 class IssueReported(SQLModel, table=True):
@@ -62,6 +77,8 @@ class IssueReported(SQLModel, table=True):
         primary_key=True
     )
 
+    # Text column (NOT part of primary key)
+    issue_name: str = Field(nullable=False)
 
 # ----------------------------
 # DATABASE ENGINE
@@ -76,5 +93,3 @@ engine = create_engine(
     echo=True,
     connect_args=connect_args
 )
-
-
