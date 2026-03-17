@@ -1,187 +1,96 @@
-// =============================
-// CONFIG
-// =============================
-
-// Replace with your PythonAnywhere username
-const API_URL = "https://api-wandering-dream-7324.fly.dev/submit/";
-
-
-// =============================
-// INITIALIZE MAP
-// =============================
-
-var map = L.map('map').setView([28.6331, 77.2211], 16);
-
-// Add OpenStreetMap layer
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap'
-}).addTo(map);
+from sqlmodel import Field, SQLModel, create_engine
+from pydantic_extra_types.coordinate import Latitude, Longitude
+from enum import Enum
+from datetime import datetime
+import pytz
 
 
-// =============================
-// LOCATION VARIABLES
-// =============================
+# ----------------------------
+# HARDCODED ISSUES
+# ----------------------------
 
-let coordinates = {
-    lat: null,
-    lng: null
-};
+class IssueType(Enum):
+    broken_footpath = (1, "broken_footpath")
+    waterlogging = (2, "waterlogging")
+    potholes = (3, "potholes")
+    street_vendors = (4, "street_vendors")
+    construction_material = (5, "construction_material")
+    garbage_dumped = (6, "garbage_dumped")
+    vehicles_parked = (7, "vehicles_parked")
+    poles_signboards = (8, "poles_signboards")
+    barricades = (9, "barricades")
+    animals_blocking = (10, "animals_blocking")
+    overgrown_plants = (11, "overgrown_plants")
+    no_streetlights = (12, "no_streetlights")
+    wheelchair_ramp = (13, "wheelchair_ramp")
+    tactile_tiles = (14, "tactile_tiles")
+    narrow_walkway = (15, "narrow_walkway")
+    footpath_ends = (16, "footpath_ends")
+    no_zebra_crossing = (17, "no_zebra_crossing")
+    vehicles_entering = (18, "vehicles_entering")
+    no_ped_signal = (19, "no_ped_signal")
+    unsafe_night = (20, "unsafe_night")
+    exposed_wires = (21, "exposed_wires")
 
-let locationMarker = null;
-
-
-// =============================
-// UPDATE MARKER FUNCTION
-// =============================
-
-function updateMarker(map) {
-
-    if (coordinates.lat === null || coordinates.lng === null) {
-        console.error("Latitude or Longitude missing.");
-        return;
-    }
-
-    // Remove previous marker
-    if (locationMarker) {
-        locationMarker.remove();
-    }
-
-    // Create draggable marker
-    locationMarker = L.marker(coordinates, {
-        draggable: true
-    }).addTo(map);
-
-    map.setView(coordinates, 18);
-
-    console.log("Marker placed:", coordinates.lat, coordinates.lng);
-
-    // Update coordinates after dragging
-    locationMarker.on("dragend", function () {
-        const position = locationMarker.getLatLng();
-
-        coordinates.lat = position.lat;
-        coordinates.lng = position.lng;
-
-        console.log("Marker moved:", coordinates.lat, coordinates.lng);
-    });
-}
+    def __init__(self, issue_id, issue_value):
+        self.id = issue_id
+        self.value_str = issue_value
 
 
-// =============================
-// GEOLOCATION
-// =============================
+# ----------------------------
+# IST TIME HELPER
+# ----------------------------
 
-const options = {
-    enableHighAccuracy: true
-};
+IST = pytz.timezone("Asia/Kolkata")
 
-function success(pos) {
-
-    coordinates.lat = pos.coords.latitude;
-    coordinates.lng = pos.coords.longitude;
-
-    updateMarker(map);
-
-    console.log("Location detected:", coordinates);
-}
-
-function error(err) {
-    alert("Unable to get your location. Please enable GPS.");
-    console.warn(`ERROR(${err.code}): ${err.message}`);
-}
-
-// Request location
-navigator.geolocation.getCurrentPosition(success, error, options);
+def get_ist_time():
+    return datetime.now(IST)
 
 
-// =============================
-// ISSUE COLLECTION
-// =============================
+# ----------------------------
+# DATABASE MODELS
+# ----------------------------
 
-function getSelectedIssues() {
-
-    const selectedIssues = [];
-
-    document.querySelectorAll('input[name="issues"]:checked')
-        .forEach((checkbox) => {
-
-            selectedIssues.push({
-                id: Number(checkbox.id),
-                value: checkbox.value
-            });
-
-        });
-
-    return selectedIssues;
-}
+class ReportBase(SQLModel):
+    latitude: Latitude
+    longitude: Longitude
 
 
-// =============================
-// SUBMIT DATA
-// =============================
+class ReportData(ReportBase, table=True):
+    __tablename__ = "report_data"
 
-const submitButton = document.getElementById("submit-button");
+    id: int | None = Field(default=None, primary_key=True)
 
-submitButton.addEventListener("click", async () => {
-
-    const issues = getSelectedIssues();
-
-    // Validate coordinates
-    if (coordinates.lat === null || coordinates.lng === null) {
-        alert("Location not detected yet. Please allow GPS.");
-        return;
-    }
-
-    // Validate issues
-    if (issues.length === 0) {
-        alert("Please select at least one issue.");
-        return;
-    }
-
-    // Disable button while sending
-    submitButton.disabled = true;
-    submitButton.innerText = "Submitting...";
-
-    try {
-
-        const response = await fetch(API_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                latitude: coordinates.lat,
-                longitude: coordinates.lng,
-                issues: issues
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        console.log("Saved:", data);
-
-        alert("✅ Report submitted successfully!");
-
-        // Reset form
-        document.querySelectorAll('input[name="issues"]').forEach(cb => cb.checked = false);
-
-    } catch (error) {
-
-        console.error(error);
-        alert("❌ Failed to submit report. Please try again.");
-
-    } finally {
-
-        submitButton.disabled = false;
-        submitButton.innerText = "Submit";
-
-    }
-
-});
+    # New timestamp column (IST)
+    timestamp: datetime = Field(default_factory=get_ist_time, nullable=False)
 
 
+class IssueReported(SQLModel, table=True):
+    __tablename__ = "issue_reported"
+
+    reportid: int = Field(
+        foreign_key="report_data.id",
+        primary_key=True
+    )
+
+    issueid: int = Field(
+        primary_key=True
+    )
+
+    # Text column (NOT part of primary key)
+    issue_name: str = Field(nullable=False)
+
+
+# ----------------------------
+# DATABASE ENGINE
+# ----------------------------
+
+sqlite_url = "sqlite:////data/rate_my_footpath.db"
+
+connect_args = {"check_same_thread": False}
+
+engine = create_engine(
+    sqlite_url,
+    echo=True,
+    connect_args=connect_args
+)
