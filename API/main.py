@@ -66,7 +66,7 @@ def submit_issue(report: ReportCreate):
 
                 db_issue = IssueReported(
                     issueid=issue.id,
-                    reportid=db_report.id
+                    reportid=db_report.id,
                     issue_name=issue.value
                 )
                 session.add(db_issue)
