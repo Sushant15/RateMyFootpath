@@ -3,3 +3,4 @@ uvicorn
 sqlmodel
 pydantic-extra-types
 a2wsgi
+pytz
